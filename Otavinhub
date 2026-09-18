@@ -1,0 +1,111 @@
+-- Script de Vídeo: Bazuca Clássica do Roblox (Efeitos Visuais e Ffogo Local)
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local Backpack = LocalPlayer:FindFirstChild("Backpack")
+
+-- Remove a bazuca antiga para não acumular no inventário
+if Backpack:FindFirstChild("Classic Rocket Launcher") then
+    Backpack["Classic Rocket Launcher"]:Destroy()
+end
+
+-- 1. Cria a Ferramenta (Tool) no Inventário
+local RocketTool = Instance.new("Tool")
+RocketTool.Name = "Classic Rocket Launcher"
+RocketTool.RequiresHandle = true
+RocketTool.Parent = Backpack
+
+-- 2. Cria o Corpo da Bazuca (Handle)
+local Handle = Instance.new("Part")
+Handle.Name = "Handle"
+Handle.Size = Vector3.new(1, 1, 4) -- Formato longo de tubo
+Handle.BrickColor = BrickColor.new("Dark stone grey")
+Handle.Material = Enum.Material.Metal
+Handle.Parent = RocketTool
+
+-- Detalhe do Foguete na Ponta (Visual da Imagem)
+local RocketTip = Instance.new("Part")
+RocketTip.Size = Vector3.new(1.5, 1.5, 2)
+RocketTip.BrickColor = BrickColor.new("Maroon") -- Vermelho escuro igual da foto
+RocketTip.Material = Enum.Material.SmoothPlastic
+RocketTip.Shape = Enum.PartType.Ball -- Formato ovalado do projétil
+RocketTip.Parent = RocketTool
+
+local Weld = Instance.new("WeldConstraint")
+Weld.Part0 = Handle; Weld.Part1 = RocketTip; Weld.Parent = Handle
+RocketTip.Position = Handle.Position + Vector3.new(0, 0, -2)
+
+-- 3. Sons de Disparo e Explosão
+local ShootSound = Instance.new("Sound")
+ShootSound.SoundId = "rbxassetid://12222208" -- Som clássico de disparo de foguete do Roblox
+ShootSound.Volume = 2
+ShootSound.Parent = Handle
+
+-- 4. Função que Controla o Foguete Voando
+local function dispararFoguete(posicaoAlvo)
+    local foguete = Instance.new("Part")
+    foguete.Size = Vector3.new(1, 1, 2)
+    foguete.BrickColor = BrickColor.new("Maroon")
+    foguete.Material = Enum.Material.Neon -- Faz o projétil brilhar em movimento
+    foguete.CanCollide = false
+    foguete.CFrame = CFrame.new(RocketTip.Position, posicaoAlvo)
+    foguete.Parent = workspace
+
+    -- Efeito de fumaça saindo de trás do foguete enquanto voa
+    local fumaçaVoo = Instance.new("Fire")
+    fumaçaVoo.Size = 2
+    fumaçaVoo.Heat = 5
+    fumaçaVoo.Parent = foguete
+
+    -- Força física para mover o foguete em linha reta até o alvo
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bv.Velocity = (posicaoAlvo - RocketTip.Position).Unit * 100 -- Velocidade do tiro
+    bv.Parent = foguete
+
+    -- Detecta quando o foguete atinge algo para explodir
+    foguete.Touched:Connect(function(objetoTocado)
+        if objetoTocado ~= Handle and not objetoTocado:IsDescendantOf(LocalPlayer.Character) then
+            bv:Destroy()
+            foguete.Anchored = true
+            foguete.Transparency = 1
+            
+            -- Cria a explosão visual na tela
+            local explosao = Instance.new("Explosion")
+            explosao.BlastRadius = 15
+            explosao.BlastPressure = 500000 -- Força do impacto nos blocos e clones
+            explosao.Position = foguete.Position
+            explosao.Parent = workspace
+
+            -- Detrói blocos locais atingidos para simular destruição real no vídeo
+            if objetoTocado.Name ~= "Terrain" and not objetoTocado:IsDescendantOf(LocalPlayer.Character) then
+                -- Pequeno atraso para a explosão aparecer antes do bloco sumir
+                task.delay(0.1, function()
+                    objetoTocado:Destroy()
+                end)
+            end
+
+            -- Limpa o foguete do mapa após a explosão
+            task.wait(2)
+            foguete:Destroy()
+        end
+    end)
+end
+
+-- 5. Ativação ao Clicar com a Bazuca na Mão
+RocketTool.Activated:Connect(function()
+    ShootSound:Play()
+    
+    -- Animação de segurar arma pesada
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://507384351"
+        char.Humanoid:LoadAnimation(anim):Play()
+    end
+
+    -- Dispara o projétil exatamente para onde o seu mouse estava apontando
+    dispararFoguete(Mouse.Hit.Position)
+end)
+
+print("Bazuca Clássica carregada com sucesso!")
